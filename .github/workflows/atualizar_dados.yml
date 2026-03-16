@@ -1,0 +1,56 @@
+name: Atualizar dados CVM
+
+on:
+  # Executa todo dia 5 de cada mês às 08:00 UTC (05:00 BRT)
+  # A CVM publica carteiras com ~2 meses de defasagem
+  schedule:
+    - cron: "0 8 5 * *"
+  # Permite execução manual pelo GitHub
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências
+        run: |
+          pip install pandas requests pyarrow openpyxl
+
+      - name: Baixar dados da CVM
+        run: python 01_baixar_dados.py
+
+      - name: Processar dados
+        run: python 02_processar_dados.py
+
+      - name: Verificar parquet gerado
+        run: |
+          if [ ! -f dados_processados/carteiras_consolidadas.parquet ]; then
+            echo "ERRO: parquet não foi gerado"
+            exit 1
+          fi
+          echo "Parquet gerado com sucesso:"
+          ls -lh dados_processados/carteiras_consolidadas.parquet
+
+      - name: Commit e push dos dados
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add dados_processados/carteiras_consolidadas.parquet
+          git add dados_processados/fundos_sem_mes_alvo.csv || true
+          # Só commita se houver mudanças
+          git diff --cached --quiet && echo "Sem alterações nos dados" && exit 0
+          git commit -m "chore: atualizar dados CVM ($(date +%Y-%m))"
+          git push

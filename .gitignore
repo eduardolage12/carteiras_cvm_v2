@@ -1,0 +1,13 @@
+# Dados brutos (pesados, baixados pelo script 01)
+dados_brutos/
+
+# Cache Python
+__pycache__/
+*.pyc
+
+# Arquivos temporários
+tmp_*
+*.tmp
+
+# Manter dados processados no repo (gerados pelo GitHub Actions)
+# !dados_processados/carteiras_consolidadas.parquet
